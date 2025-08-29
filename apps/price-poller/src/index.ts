@@ -58,7 +58,7 @@ ws.on("message", async (rawData: any) => {
         price: data.p + (0.01*data.p) , // Trade price
         quantity: data.q , // Trade quantity
         tradeId: data.t,
-        timestamp: data.T, // Trade time
+        timestamp: data.T, 
       };
 
       await client.publish(

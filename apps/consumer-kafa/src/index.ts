@@ -43,9 +43,10 @@ async function insertData(trades: TradeDetails[]) {
   console.log("price" , trades[1])
 
   try {
-    for (const trade of trades) {
+    for (const trade of trades) { 
+
       await client.query(
-        `INSERT INTO trades (symbol, price, quantity, timestamp)
+        `INSERT INTO ${trade.symbol} (symbol, price, quantity, timestamp)
          VALUES ($1, $2, $3, $4)`,
         [trade.symbol, trade.price, trade.quantity, trade.timestamp]
       );
