@@ -53,19 +53,30 @@ ws.on("message", async (rawData: any) => {
     // console.log(data.e)
     if (data.e === "trade") {
       // console.log(data);
+
+      console.log(typeof Number(Number(data.p )+ Number(0.01*data.p)))
+      const pubSubData = {
+        symbol: data.s, // BTCUSDT
+        buyPrice: Number(Number(data.p )+ Number(0.01*data.p)), // Trade price
+        sellPrice: data.p , // Trade price
+        quantity: data.q, // Trade quantity
+        tradeId: data.t,
+        timestamp: data.T, 
+      }
       const tradeData = {
         symbol: data.s, // BTCUSDT
-        price: data.p + (0.01*data.p) , // Trade price
+        price: data.p  , // Trade price
         quantity: data.q , // Trade quantity
         tradeId: data.t,
         timestamp: data.T, 
       };
 
       await client.publish(
-        `binance:prices:${tradeData.symbol}`,
-        JSON.stringify(tradeData)
+        `binance:prices:${pubSubData.symbol}`,
+        JSON.stringify(pubSubData)
       );
-      console.log("Published:", tradeData);
+      // console.log("Published:", pubSubData);
+      console.log("Produced:", tradeData);
 
       await kafkaProducer.send({
         topic: tradeData.symbol,
@@ -80,7 +91,7 @@ ws.on("message", async (rawData: any) => {
       //   console.log("produced data to topic - ", asset);
       // });
 
-      console.log("Produced data to kafka");
+      // console.log("Produced data to kafka");
     }
   } catch (error) {
     console.log(error);
