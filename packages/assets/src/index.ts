@@ -1,0 +1,2 @@
+export const BINANCE_ASSETS = ['BTCUSDT','SOLUSDT','ETHUSDT']
+

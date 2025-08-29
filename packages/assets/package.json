@@ -1,0 +1,22 @@
+{
+  "name": "@repo/assets",
+  "version": "1.0.0",
+  "description": "",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "tsc -b && node dist/index.js", 
+    "build": "tsc -b"
+  },
+  "devDependencies": {
+    "@repo/typescript-config": "workspace:*"
+  },
+  
+  "exports": {
+   ".":"./src/index.ts" 
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
