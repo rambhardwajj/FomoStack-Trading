@@ -41,18 +41,18 @@ export async function initDB() {
     await client.query(`
       SELECT create_hypertable('ETHUSDT', 'timestamp', if_not_exists => TRUE);
     `);
-          console.log("✅ ETHUSDT table and hypertable ready");
+          console.log("ETHUSDT table and hypertable ready");
 
     await client.query(`
       SELECT create_hypertable('SOLUSDT', 'timestamp', if_not_exists => TRUE);
     `);
-          console.log("✅ SOLUSDT table and hypertable ready");
+          console.log("SOLUSDT table and hypertable ready");
 
     await client.query(`
       SELECT create_hypertable('BTCUSDT', 'timestamp', if_not_exists => TRUE);
       `);
-      console.log("✅ BITUSDT table and hypertable ready");
-
+      console.log("BITUSDT table and hypertable ready");
+      
     await client.end();
   } catch (error) {
     console.error("error", error);
