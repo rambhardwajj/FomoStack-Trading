@@ -1,0 +1,82 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id              String    @id @default(cuid())
+  username        String    @unique
+  email           String    @unique
+  passwordHash    String
+  balance         Float     @default(0.0)
+  picture         String?   // URL to profile picture
+  orders          Order[]   // Relation to Orders
+  transactions    Transaction[] // For deposits/withdrawals
+  positions       Position[] // Relation to Positions
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+model Order {
+  id             String    @id @default(cuid())
+  userId         String
+  user           User      @relation(fields: [userId], references: [id])
+
+  symbol         String      
+  orderType      String       
+  quantity       Int
+  price          Float        
+  leverage       Float?  
+  margin        Float?     
+
+  status         String       // OPEN, FILLED, PARTIALLY_FILLED, CANCELLED, CLOSED
+
+  pnl            Float?       // Profit & Loss
+  closedAt       DateTime?
+
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+}
+
+model Position {
+  id             String    @id @default(cuid())
+  userId         String
+  user           User      @relation(fields: [userId], references: [id])
+
+  symbol         String      
+  quantity       Int
+  entryPrice     Float       
+  leverage       Float?       
+
+  status         String       // OPEN, CLOSED
+  pnl            Float?       // Profit & Loss
+  closedAt       DateTime?
+
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+}
+
+model Transaction {
+  id             String    @id @default(cuid())
+  userId         String
+  user           User      @relation(fields: [userId], references: [id])
+
+  type           String    // DEPOSIT, WITHDRAWAL
+  amount         Float
+  status         String    // PENDING, COMPLETED, FAILED
+
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+}
