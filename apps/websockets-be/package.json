@@ -1,0 +1,25 @@
+{
+  "name": "websockets-be",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "tsc -b",
+    "dev": "tsc -b && node dist/index.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@repo/typescript-config": "workspace:*"
+  },
+  "dependencies": {
+    "@repo/assets": "workspace:*", 
+    "@types/node": "^22.15.3",
+    "@types/ws": "^8.18.1",
+    "redis": "^5.8.2",
+    "ws": "^8.18.3"
+  }
+}
