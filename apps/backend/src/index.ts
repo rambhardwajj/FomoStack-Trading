@@ -5,7 +5,7 @@ import cors from "cors";
 import { errorHandler } from "./middleware/error.middleware.js";
 import redis from "redis";
 import { CustomError } from "./utils/CustomError.js";
-import {BINANCE_ASSETS} from "@repo/assets"
+import { BINANCE_ASSETS } from "@repo/assets";
 dotevn.config();
 
 const PORT = process.env.PORT;
@@ -25,6 +25,7 @@ app.use(
   })
 );
 
+
 const beSubscriber = redis.createClient({ url: "redis://localhost:6379" });
 
 async function connectBeSubscriber() {
@@ -38,19 +39,26 @@ async function connectBeSubscriber() {
 }
 async function subscribeToThePubSub() {
   try {
-    for (const asset of BINANCE_ASSETS){
-        await beSubscriber.subscribe(`binance:prices:${asset}`,  (message)=>{
-            console.log(`Message from ${asset}: ${message}`);
-        })
-
+    for (const asset of BINANCE_ASSETS) {
+      await beSubscriber.subscribe(`binance:prices:${asset}`, (message) => {
+        console.log(`Message from ${asset}: ${message}`);
+      });
     }
   } catch (error) {
     console.log("error", error);
   }
 }
-await connectBeSubscriber();
-await subscribeToThePubSub();
+async function subscribeToPubSub(){
+  await connectBeSubscriber();
+  await subscribeToThePubSub();
+}
+subscribeToPubSub();
 
+
+import authRoute from "./routes/auth.route"
+
+
+app.use("/api/v1/auth", authRoute);
 
 app.use(errorHandler);
 app.listen(PORT, () => {

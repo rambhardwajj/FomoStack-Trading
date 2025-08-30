@@ -15,68 +15,71 @@ datasource db {
 }
 
 model User {
-  id              String    @id @default(cuid())
-  username        String    @unique
-  email           String    @unique
-  passwordHash    String
-  balance         Float     @default(0.0)
-  picture         String?   // URL to profile picture
-  orders          Order[]   // Relation to Orders
-  transactions    Transaction[] // For deposits/withdrawals
-  positions       Position[] // Relation to Positions
-  
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  id           String        @id @default(cuid())
+  username     String        @unique
+  email        String        @unique
+  passwordHash String
+  balance      Int         @default(5000)
+  picture      String? // URL to profile picture
+  orders       Order[] // Relation to Orders
+  transactions Transaction[] // For deposits/withdrawals
+  positions    Position[] // Relation to Positions
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Order {
-  id             String    @id @default(cuid())
-  userId         String
-  user           User      @relation(fields: [userId], references: [id])
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
 
-  symbol         String      
-  orderType      String       
-  quantity       Int
-  price          Float        
-  leverage       Float?  
-  margin        Float?     
+  symbol    String
+  orderType String
+  quantity  Int?
+  price     Int?
+  leverage  Int?
+  margin    Int?
 
-  status         String       // OPEN, FILLED, PARTIALLY_FILLED, CANCELLED, CLOSED
+  status String // OPEN, FILLED, PARTIALLY_FILLED, CANCELLED, CLOSED
 
-  pnl            Float?       // Profit & Loss
-  closedAt       DateTime?
+  pnl      Int? // Profit & Loss
+  openingPrice Int?
+  closingPrice Int?
 
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
+  closedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Position {
-  id             String    @id @default(cuid())
-  userId         String
-  user           User      @relation(fields: [userId], references: [id])
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
 
-  symbol         String      
-  quantity       Int
-  entryPrice     Float       
-  leverage       Float?       
+  symbol     String
+  quantity   Int?
+  entryPrice Int
+  leverage   Int?
 
-  status         String       // OPEN, CLOSED
-  pnl            Float?       // Profit & Loss
-  closedAt       DateTime?
+  status   String // OPEN, CLOSED
+  pnl      Int? // Profit & Loss
+  closedAt DateTime?
 
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Transaction {
-  id             String    @id @default(cuid())
-  userId         String
-  user           User      @relation(fields: [userId], references: [id])
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
 
-  type           String    // DEPOSIT, WITHDRAWAL
-  amount         Float
-  status         String    // PENDING, COMPLETED, FAILED
+  type   String // DEPOSIT, WITHDRAWAL
+  amount Int
+  status String // PENDING, COMPLETED, FAILED
 
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
