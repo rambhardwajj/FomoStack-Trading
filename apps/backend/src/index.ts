@@ -45,7 +45,7 @@ async function subscribeToThePubSub() {
 
     }
   } catch (error) {
-
+    console.log("error", error);
   }
 }
 await connectBeSubscriber();
