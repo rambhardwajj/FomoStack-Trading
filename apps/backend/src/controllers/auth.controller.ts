@@ -7,40 +7,41 @@ import {
   createHash,
   generateAccessToken,
   generateRefreshToken,
+  hashPassword,
+  passwordMatch,
 } from "../utils/helper.js";
 import ms, { type StringValue } from "ms";
 import { generateCookieOptions } from "../config/cookies.js";
-import { prisma } from "../config/db.js";
+import { prisma } from "../config/db";
 
 export const signup: RequestHandler = asyncHandler(async (req, res) => {
+  console.log("req.body", req.body);
   const { email, password } = req.body;
-  if (!email || !password) {
-    throw new CustomError(400, "Email and password are required");
-  }
-
+  console.log("email, password", email, password);
+  if (!email || !password) throw new CustomError(400, "Email and password are required");
+  
   let existingUser;
   const user = await prisma.user.findUnique({
     where: { email },
   });
+
   existingUser = user;
-  if (existingUser) {
-    throw new CustomError(400, "User already exists");
-  }
+  if (existingUser)  throw new CustomError(400, "User already exists");
+  
+  const passwordHash = await hashPassword(password);
 
   const newUser = await prisma.user.create({
     data: {
       email,
       username: email.split("@")[0],
-      picture: "",
-      password,
+      picture: "https://avatar.iran.liara.run/public",
+      passwordHash,
       balance: {
-        usd: "10000",
+        usd: "5000",
         btc: "0",
         sol: "0",
         eth: "0",
       },
-      orderHistory: 0,
-      positions: [],
     },
   });
   res
@@ -57,17 +58,22 @@ export const signin: RequestHandler = asyncHandler(async (req, res) => {
   const user = await prisma.user.findUnique({
     where: { email },
   });
-  if (!user || user.password !== password) {
+
+  if(!user){
     throw new CustomError(400, "Invalid email or password");
   }
+
+  const isPasswordValid = await passwordMatch(password, user.passwordHash);
+  if (!isPasswordValid) {
+    throw new CustomError(400, "Invalid email or password");
+  }
+
   const accessToken = generateAccessToken(user);
   const refreshToken = generateRefreshToken(user);
-  user.refreshToken = refreshToken;
   const hashedRefreshToken = createHash(refreshToken);
   const expiresAt = new Date(
     Date.now() + ms(process.env.REFRESH_TOKEN_EXPIRY as StringValue)
   );
-  // put in db
   await prisma.user.update({
     where: { email },
     data: { refreshToken: hashedRefreshToken, refreshTokenExpiry: expiresAt },
@@ -99,15 +105,13 @@ export const googleLogin: RequestHandler = asyncHandler(async (req, res) => {
         email,
         username: name,
         picture,
-        password: "",
+        passwordHash: "",
         balance: {
           usd: "10000",
           btc: "0",
           sol: "0",
           eth: "0",
         },
-        orderHistory: 0,
-        positions: [],
       },
     });
   }
@@ -123,6 +127,10 @@ export const googleLogin: RequestHandler = asyncHandler(async (req, res) => {
   );
 
   // put in db
+  await prisma.user.update({
+    where: { email },
+    data: { refreshToken: hashedRefreshToken, refreshTokenExpiry: expiresAt },
+  });
 
   res
     .status(200)
@@ -130,3 +138,19 @@ export const googleLogin: RequestHandler = asyncHandler(async (req, res) => {
     .cookie("refreshToken", refreshToken, generateCookieOptions({ rememberMe }))
     .json(new ApiResponse(200, "Google login successful", null));
 });
+
+export const signout: RequestHandler = asyncHandler(async(req, res)=>{
+  const userId = req.user.id;
+
+  if(!userId)throw new CustomError(401, "Not authorized");
+
+  await prisma.user.update({
+    where: {id: userId},
+    data: {
+      refreshToken: null, refreshTokenExpiry: null
+    }
+  })
+
+  res.status(200).json(new ApiResponse(200, "Signout successful", null));
+
+})

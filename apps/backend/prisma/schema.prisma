@@ -6,7 +6,6 @@
 
 generator client {
   provider = "prisma-client-js"
-  output   = "../src/generated/prisma"
 }
 
 datasource db {
@@ -19,12 +18,14 @@ model User {
   username     String        @unique
   email        String        @unique
   passwordHash String
-  balance      Int         @default(5000)
+  balance      Json          @default("{}")
   picture      String? // URL to profile picture
   orders       Order[] // Relation to Orders
   transactions Transaction[] // For deposits/withdrawals
   positions    Position[] // Relation to Positions
 
+  refreshToken      String?   // Hashed refresh token
+  refreshTokenExpiry DateTime?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }

@@ -3,7 +3,7 @@ import express, { type Application } from "express";
 import cookieParser from "cookie-parser";
 import cors from "cors";
 import { errorHandler } from "./middleware/error.middleware.js";
-import redis from "redis";
+import  { createClient } from "redis";
 import { CustomError } from "./utils/CustomError.js";
 import { BINANCE_ASSETS } from "@repo/assets";
 dotevn.config();
@@ -26,8 +26,9 @@ app.use(
 );
 
 
-const beSubscriber = redis.createClient({ url: "redis://localhost:6379" });
-
+const beSubscriber = createClient({
+  url: "redis://localhost:6379",
+});
 async function connectBeSubscriber() {
   try {
     await beSubscriber.connect();
@@ -57,10 +58,10 @@ subscribeToPubSub();
 
 import authRoute from "./routes/auth.route"
 
-
 app.use("/api/v1/auth", authRoute);
 
 app.use(errorHandler);
 app.listen(PORT, () => {
   console.log(" server is listening on port", PORT);
 });
+

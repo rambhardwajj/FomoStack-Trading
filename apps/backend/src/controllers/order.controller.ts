@@ -91,7 +91,6 @@ export const calculatePnl = () : number => {
   return 1000;
 } 
 
-
 export const openOrder: RequestHandler = asyncHandler(
   async (req: Request, res: Response) => {
     const { symbol, orderType, quantity, price, leverage, margin } = req.body;
