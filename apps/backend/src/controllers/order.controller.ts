@@ -2,7 +2,14 @@ import type { Request, RequestHandler, Response } from "express";
 import asyncHandler from "../utils/asyncHandler.js";
 import { CustomError } from "../utils/CustomError.js";
 import { prisma } from "../config/db.js";
-import { User } from "@prisma/client";
+import { Order, User } from "@prisma/client";
+import { beSubscriber } from "../index.js";
+import { ApiResponse } from "../utils/ApiResponse.js";
+
+const orders = new Map<string, Order>(); // orderId -> Order
+const userOrders = new Map<string, Set<string>>(); // userId -> Set of orderIds
+const activeOrders = new Set<string>(); // Set of active order IDs
+const ordersBySymbol = new Map<string, Set<string>>();
 
 const getUserData = async (userId: string) => {
   if (!userId) {
@@ -19,7 +26,6 @@ const getUserData = async (userId: string) => {
 
   return user;
 };
-
 const getUserBalance = (user: User) => {
   if (!user) {
     throw new CustomError(
@@ -31,11 +37,6 @@ const getUserBalance = (user: User) => {
   const userBalance = user.balance;
   return userBalance;
 };
-
-const getCurrStPrice = (stock: string) => {
-  return 1;
-};
-
 function checkValidOrder(exposedTradeValue: number, userBalance: number) {
   if (exposedTradeValue < userBalance)
     throw new CustomError(
@@ -45,7 +46,6 @@ function checkValidOrder(exposedTradeValue: number, userBalance: number) {
   // if not then user can place the order in case of buy ̰
   return true;
 }
-
 function calculateLiqAmt(
   userBalance: number,
   orderValue: number,
@@ -54,16 +54,37 @@ function calculateLiqAmt(
   stopLoss: number,
   currStockPrice: number
 ) {
-  let percentageChange = 0;
-
   if (orderType === "buy") {
     let liqAmt = currStockPrice - currStockPrice / leverage;
     return liqAmt - stopLoss;
-  } else if (orderType === "sell") {
+  } else {
     let liqAmt = currStockPrice + currStockPrice / leverage;
     return liqAmt + stopLoss;
   }
 }
+async function updateUserBalance(userId: string, updatedBalance: number) {
+  if (!userId || updatedBalance === undefined || updatedBalance === null) {
+    throw new CustomError(400, "User ID or updated balance not provided");
+  }
+  if (updatedBalance < 0) {
+    throw new CustomError(400, "Balance cannot be negative");
+  }
+
+  const updatedUser = await prisma.user.update({
+    where: {
+      id: userId,
+    },
+    data: {
+      balance: updatedBalance,
+    },
+  });
+
+  if (!updatedUser) {
+    throw new CustomError(500, "user balance not debited");
+  }
+}
+
+async function startTransaction(orderData: Order) {}
 
 export const openOrder: RequestHandler = asyncHandler(
   async (req: Request, res: Response) => {
@@ -79,7 +100,8 @@ export const openOrder: RequestHandler = asyncHandler(
 
     const user = await getUserData(userId);
     const userBalance = getUserBalance(user);
-    const currStockPrice = getCurrStPrice(symbol);
+    const assetPrice = await beSubscriber.get(`binance:latest:${symbol}`);
+    const currStockPrice = Number(assetPrice);
 
     if (!userBalance)
       throw new CustomError(500, "User Balance cannot be retrieved");
@@ -92,7 +114,7 @@ export const openOrder: RequestHandler = asyncHandler(
       throw new CustomError(400, "Insufficient balance or invalid order ");
     }
 
-    let liquidatePrice;
+    let liquidatePrice: number;
     liquidatePrice = calculateLiqAmt(
       userBalance,
       orderValue,
@@ -102,19 +124,55 @@ export const openOrder: RequestHandler = asyncHandler(
       currStockPrice
     );
 
-    if (leverage) {
-      if (orderType === "buy") {
+    const orderId = crypto.randomUUID();
 
-      } else if (orderType === "sell") {
+    const orderData = {
+      id: orderId,
+      userId: userId,
+      symbol: symbol as string,
+      orderType: orderType as string,
+      price: Math.round(currStockPrice),
+      leverage: leverage as number,
+      margin: margin as number,
+      status: "OPEN",
+      openingPrice: Math.round(currStockPrice),
+      stopLoss: Math.round(stopLoss),
+      closingPrice: null,
+      closedAt: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      user: user,
+    };
 
+    const position = await startTransaction(orderData);
+
+    try {
+      // all orders ka map
+      orders.set(orderId, orderData);
+
+      // all user orders ka map with orders set mai
+      if (!userOrders.has(userId)) {
+        userOrders.set(userId, new Set());
       }
-    } else {
-      if (orderType === "buy") {
-      } else if (orderType === "sell") {
+      userOrders.get(userId)?.add(orderId);
+
+      //assets ka map
+      if (!ordersBySymbol.has(symbol.toUpperCase())) {
+        ordersBySymbol.set(symbol.toUpperCase(), new Set());
       }
+      ordersBySymbol.get(symbol.toUpperCase())!.add(orderId);
+
+      // active orders
+      if (!activeOrders.has(orderId)) activeOrders.add(orderId);
+      await updateUserBalance(userId, userBalance - margin);
+
+      res.status(200).json(new ApiResponse(200, "Order Opened", orderData));
+    } catch (error) {
+      throw new CustomError(500, "Open Order failed ")
     }
   }
 );
+
 export const closeOrder: RequestHandler = asyncHandler(async (req, res) => {
   // find order in db
   // update order - close price

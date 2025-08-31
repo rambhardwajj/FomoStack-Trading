@@ -17,7 +17,7 @@ model User {
   id           String        @id @default(cuid())
   username     String        @unique
   email        String        @unique
-  passwordHash String
+  passwordHash String?
   balance      Int           @default(5000)
   picture      String? // URL to profile picture
   orders       Order[] // Relation to Orders
@@ -26,8 +26,8 @@ model User {
 
   refreshToken       String? // Hashed refresh token
   refreshTokenExpiry DateTime?
-  createdAt          DateTime  @default(now())
-  updatedAt          DateTime  @updatedAt
+  createdAt          DateTime?  @default(now())
+  updatedAt          DateTime?  @updatedAt
 }
 
 model Order {
@@ -37,7 +37,6 @@ model Order {
 
   symbol    String
   orderType String
-  quantity  Int?
   price     Int?
   leverage  Int?
   margin    Int?
@@ -50,8 +49,8 @@ model Order {
 
   closedAt DateTime?
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime? @default(now())
+  updatedAt DateTime? @updatedAt
 }
 
 model Position {
@@ -69,8 +68,8 @@ model Position {
   
   closedAt DateTime?
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime? @default(now())
+  updatedAt DateTime? @updatedAt
 }
 
 model Transaction {

@@ -3,7 +3,7 @@ import express, { type Application } from "express";
 import cookieParser from "cookie-parser";
 import cors from "cors";
 import { errorHandler } from "./middleware/error.middleware.js";
-import  { createClient } from "redis";
+import  { createClient, RedisArgument, RedisClientType } from "redis";
 import { CustomError } from "./utils/CustomError.js";
 import { BINANCE_ASSETS } from "@repo/assets";
 dotevn.config();
@@ -14,6 +14,7 @@ const app: Application = express();
 app.use(express.json());
 app.use(cookieParser());
 app.use(express.urlencoded({ extended: true }));
+
 app.use(
   cors({
     credentials: true,
@@ -26,9 +27,10 @@ app.use(
 );
 
 
-const beSubscriber = createClient({
+export const beSubscriber : RedisClientType = createClient({
   url: "redis://localhost:6379",
 });
+
 async function connectBeSubscriber() {
   try {
     await beSubscriber.connect();
@@ -43,7 +45,6 @@ async function subscribeToThePubSub() {
     for (const asset of BINANCE_ASSETS) {
       await beSubscriber.subscribe(`binance:prices:${asset}`, (message) => {
         console.log(`Message from ${asset}: ${message}`);
-
       });
     }
   } catch (error) {
