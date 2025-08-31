@@ -1,72 +1,93 @@
 "use client";
+import AssetsTicker from "@/componenets/AssetsTicker";
+import TradingView from "@/componenets/TradingViews";
+import Image from "next/image";
+import React from "react";
 
-import { useEffect, useRef, useState } from "react";
-type AssetData = {
-  buyPrice: number;
-  sellPrice: number;
-  lastBuyPrice: number;
-  lastSellPrice: number;
-};
-
-export default function Home() {
-  const socketRefVal = useRef<WebSocket | null>(null);
-  const assetsRef = useRef<Record<string, AssetData>>({});
-  const [, setRender] = useState<number>(0);
-
-  useEffect(() => {
-    const socket = new WebSocket("ws://localhost:8080");
-    socketRefVal.current = socket;
-
-    socket.onopen = () => {
-      console.log("connected to websocket server");
-    };
-    socket.onmessage = (event) => {
-      const msg = JSON.parse(event.data);
-      const existing = assetsRef.current[msg.symbol];
-      assetsRef.current[msg.symbol] = {
-        buyPrice: Number(msg.buyPrice) ,
-        sellPrice: Number(msg.sellPrice),
-        lastBuyPrice: existing ? existing.buyPrice : Number(msg.buyPrice),
-        lastSellPrice: existing ? existing.sellPrice : Number(msg.sellPrice),
-      };
-      // console.log(assetsRef.current)
-    };
-
-    setInterval(() => {
-      console.log("Rerendering the component");
-      setRender((prev) => prev + 1); // just trigginering the rerender
-    }, 300);
-    socket.onerror = (error) => {
-      console.error("WebSocket Error:", error);
-    };
-    socket.onclose = () => {
-      console.log("Disconnected from WebSocket server");
-    };
-
-    return () => {
-      socket.close();
-    };
-  }, []);
+export default function TradingPage() {
   return (
-    <div>
-      <h1 className="text-3xl font-bold underline">FomoStack</h1>
-      <h2 className="text-2xl font-bold underline">Real-time Crypto Prices</h2>
-      <br />
-      {Object.entries(assetsRef.current).map(
-        ([symbol, { buyPrice, sellPrice, lastBuyPrice, lastSellPrice }]) => (
-          <div
-            key={symbol}
-            className="p-3 border rounded shadow-sm flex justify-between bg-white"
-          >
-            <span className="font-semibold">{symbol}</span>
-            <div className="flex gap-4">
-              <div className={`${lastBuyPrice < buyPrice ? "text-green-600": "text-red-400"} `}>Buy: {buyPrice.toFixed(2)}</div>
-              <div className={`${lastSellPrice < sellPrice ? "text-green-600": "text-red-400"} `}>Sell: {sellPrice.toFixed(2)}</div>
-            </div>
-            <br />
+    <div className="min-h-screen bg-black text-white flex flex-col">
+      {/* Header  */}
+      <div className="flex items-center justify-between px-4 py-2 border-b border-gray-700">
+        <div className="flex items-center space-x-4">
+          <div className=" rounded">
+            <img src="image.png" alt="" width={150}/>
           </div>
-        )
-      )}
+          <div className="">
+            <img src="btc.png" alt="" width={50} />
+          </div>
+          <div className="">
+            <img className="rounded-[50%]" src="et.png" alt=""  width={30}/>
+          </div>
+          <div className="rounded">
+            <img src="sol.png" alt="" width={35}/>
+          </div>
+        </div>
+
+        <div className="flex items-center space-x-4">
+          <div className="px-4 py-2 border border-gray-700 rounded">5000 $</div>
+          <button className="px-4 py-2 border border-gray-700 rounded">
+            Deposit
+          </button>
+          <div className="w-8 h-8 border border-gray-700 rounded-full"></div>
+        </div>
+      </div>
+
+      <div className="flex flex-1 p-4 space-x-4">
+        {/* Left  */}
+        <div className="flex flex-col w-1/4 space-y-4">
+          <div className="flex-1 rounded">
+            <AssetsTicker />
+          </div>
+
+          <div className="flex space-x-4">
+            <div className="flex-1 border border-gray-700 rounded h-15">
+                Buy
+            </div>
+            <div className="flex-1 border border-gray-700 rounded h-15 ">
+                Sell 
+            </div>
+          </div>
+          <div className="h-10 border border-gray-700 rounded"></div>
+          <div className="h-10 border border-gray-700 rounded"></div>
+          <div className="h-10 border border-gray-700 rounded"></div>
+        </div>
+
+        <div className="flex flex-col flex-1 space-y-4">
+          {/* Chart  */}
+          <div className="h-10 border border-gray-700 rounded">
+            
+          </div>
+          <div className="flex  p-2 border border-gray-700 rounded">
+            <TradingView />
+          </div>
+
+          {/* RL  */}
+          <div className="flex space-x-4">
+            <div className="flex flex-col space-y-2">
+              <div>
+                <button className="px-2 py-1 mx-2 border border-gray-700 rounded h-10">
+                  Open
+                </button>
+                <button className="px-2 py-1 mx-2 border border-gray-700 rounded h-10">
+                  Close
+                </button>
+                <button className="px-2 py-1 mx-2 border border-gray-700 rounded h-10">
+                  Pending
+                </button>
+              </div>
+              <div></div>
+            </div>
+
+            <div className="flex-1 flex flex-col space-y-2">
+              <div className="h-13 border border-gray-700 rounded"></div>
+              <div className="h-13 border border-gray-700 rounded"></div>
+              <div className="h-13 border border-gray-700 rounded"></div>
+              <div className="h-13 border border-gray-700 rounded"></div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
