@@ -12,7 +12,7 @@ import {
 } from "../utils/helper.js";
 import ms, { type StringValue } from "ms";
 import { generateCookieOptions } from "../config/cookies.js";
-import { prisma } from "../config/db";
+import { prisma } from "../config/db.js";
 
 export const signup: RequestHandler = asyncHandler(async (req, res) => {
   console.log("req.body", req.body);

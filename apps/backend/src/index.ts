@@ -56,9 +56,11 @@ async function subscribeToPubSub(){
 subscribeToPubSub();
 
 
-import authRoute from "./routes/auth.route"
+import authRoute from "./routes/auth.route.js"
+import candlesRoute from  "./routes/candles.route.js"
 
 app.use("/api/v1/auth", authRoute);
+app.use("/api/v1/candles", candlesRoute);
 
 app.use(errorHandler);
 app.listen(PORT, () => {
