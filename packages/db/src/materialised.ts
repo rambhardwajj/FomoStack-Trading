@@ -1,20 +1,7 @@
 import {client} from "./index.js"
+import {INTERVALS} from "./index.js"
 
 const ASSETS = ['BTCUSDT','SOLUSDT','ETHUSDT']
-
-const INTERVALS = [
-  "1 minute",
-  "3 minutes",
-  "5 minutes",
-  "10 minutes",
-  "15 minutes",
-  "30 minutes",
-  "1 hour",
-  "4 hours",
-  "1 day",
-  "1 week",
-  "1 month",
-];
 
 console.log(ASSETS.length)
 async function createMaterializedViews() {
