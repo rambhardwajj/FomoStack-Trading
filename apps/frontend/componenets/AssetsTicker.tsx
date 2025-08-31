@@ -20,6 +20,10 @@ export default function AssetsTicker() {
     socket.onmessage = (event) => {
       const msg = JSON.parse(event.data);
       const existing = assetsRef.current[msg.symbol];
+      // console.log({
+      //   assetsRef: assetsRef.current[msg.symbol]?.buyPrice,
+      //   existing: existing?.buyPrice
+      // })
       assetsRef.current[msg.symbol] = {
         buyPrice: Number(msg.buyPrice),
         sellPrice: Number(msg.sellPrice),
@@ -47,7 +51,7 @@ export default function AssetsTicker() {
         ([symbol, { buyPrice, sellPrice, lastBuyPrice, lastSellPrice }]) => (
           <div
             key={symbol}
-            className="flex items-center justify-between bg-neutral-900 border border-neutral-700 rounded-xl px-4 py-3 shadow-sm"
+            className="flex items-center justify-between bg-neutral-900 border border-neutral-700 rounded-xl px-4 py-2 shadow-sm"
           >
             {/* Symbol */}
             <span className="font-semibold text-white w-24">{symbol}</span>

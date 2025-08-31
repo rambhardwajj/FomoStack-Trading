@@ -36,12 +36,7 @@ export const signup: RequestHandler = asyncHandler(async (req, res) => {
       username: email.split("@")[0],
       picture: "https://avatar.iran.liara.run/public",
       passwordHash,
-      balance: {
-        usd: "5000",
-        btc: "0",
-        sol: "0",
-        eth: "0",
-      },
+      balance:5000
     },
   });
   res
@@ -106,12 +101,7 @@ export const googleLogin: RequestHandler = asyncHandler(async (req, res) => {
         username: name,
         picture,
         passwordHash: "",
-        balance: {
-          usd: "10000",
-          btc: "0",
-          sol: "0",
-          eth: "0",
-        },
+        balance: 5000
       },
     });
   }

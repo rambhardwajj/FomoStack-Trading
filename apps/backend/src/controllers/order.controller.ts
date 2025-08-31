@@ -1,31 +1,130 @@
 import type { Request, RequestHandler, Response } from "express";
 import asyncHandler from "../utils/asyncHandler.js";
 import { CustomError } from "../utils/CustomError.js";
+import { prisma } from "../config/db.js";
+import { User } from "@prisma/client";
 
-function checkValidOrder(
-  quantity: number,
-  price: number,
-  margin: number,
+const getUserData = async (userId: string) => {
+  if (!userId) {
+    throw new CustomError(400, "userId is invalid");
+  }
+
+  const user = await prisma.user.findFirst({
+    where: {
+      id: userId,
+    },
+  });
+
+  if (!user) throw new CustomError(400, "user does not exists");
+
+  return user;
+};
+
+const getUserBalance = (user: User) => {
+  if (!user) {
+    throw new CustomError(
+      400,
+      "Balance could not be fetched as user doesnot exists"
+    );
+  }
+
+  const userBalance = user.balance;
+  return userBalance;
+};
+
+const getCurrStPrice = (stock: string) => {
+  return 1;
+};
+
+function checkValidOrder(exposedTradeValue: number, userBalance: number) {
+  if (exposedTradeValue < userBalance)
+    throw new CustomError(
+      403,
+      `Cannot apply ${exposedTradeValue} margin as User Balance is not sufficient `
+    );
+  // if not then user can place the order in case of buy ̰
+  return true;
+}
+
+function calculateLiqAmt(
+  userBalance: number,
+  orderValue: number,
   leverage: number,
   orderType: string,
-  symbol: string, 
-  userBalance: number
-): {  isOrderValid: boolean, orderValue: number} {
-  return {
-    isOrderValid: true,
-    orderValue: 1000
-  };
+  stopLoss: number,
+  currStockPrice: number
+) {
+  let percentageChange = 0;
+
+  if (orderType === "buy") {
+    let liqAmt = currStockPrice - currStockPrice / leverage;
+    return liqAmt - stopLoss;
+  } else if (orderType === "sell") {
+    let liqAmt = currStockPrice + currStockPrice / leverage;
+    return liqAmt + stopLoss;
+  }
 }
 
-const getUserBalance = (userId: string) : number=> {
-  return 5000;
-}
+export const openOrder: RequestHandler = asyncHandler(
+  async (req: Request, res: Response) => {
+    let { symbol, orderType, leverage, margin, stopLoss } = req.body;
+    const userId = req.user.id;
+
+    if (!symbol || !orderType || !leverage || !margin) {
+      throw new CustomError(400, "Invalid Inputs");
+    }
+    if (!stopLoss) {
+      stopLoss = margin;
+    }
+
+    const user = await getUserData(userId);
+    const userBalance = getUserBalance(user);
+    const currStockPrice = getCurrStPrice(symbol);
+
+    if (!userBalance)
+      throw new CustomError(500, "User Balance cannot be retrieved");
+
+    const orderValue = margin;
+
+    const isOrderValid = checkValidOrder(orderValue, userBalance);
+
+    if (!isOrderValid) {
+      throw new CustomError(400, "Insufficient balance or invalid order ");
+    }
+
+    let liquidatePrice;
+    liquidatePrice = calculateLiqAmt(
+      userBalance,
+      orderValue,
+      leverage,
+      orderType,
+      stopLoss,
+      currStockPrice
+    );
+
+    if (leverage) {
+      if (orderType === "buy") {
+
+      } else if (orderType === "sell") {
+
+      }
+    } else {
+      if (orderType === "buy") {
+      } else if (orderType === "sell") {
+      }
+    }
+  }
+);
+export const closeOrder: RequestHandler = asyncHandler(async (req, res) => {
+  // find order in db
+  // update order - close price
+  // update the status of the order
+});
 
 export const getOrders: RequestHandler = asyncHandler(
   async (req: Request, res: Response) => {
     try {
       const userId = req.user.id;
-      // find orders in db
 
       res.status(200).json({});
     } catch (error) {
@@ -38,8 +137,7 @@ export const getOpenOrdersForUser: RequestHandler = asyncHandler(
     try {
       const userId = req.user.id;
 
-      // find orders in db with userId = userId and Order.status = Open 
-
+      // find orders in db with userId = userId and Order.status = Open
 
       res.status(200).json({});
     } catch (error) {
@@ -69,12 +167,13 @@ export const getClosedOrdersForUser: RequestHandler = asyncHandler(
       res.status(500).json({ message: error });
     }
   }
-);  
+);
 export const getBalance: RequestHandler = asyncHandler(
   async (req: Request, res: Response) => {
     try {
       const userId = req.user.id;
-      const userBalance = getUserBalance(userId);
+      const user = await getUserData(userId);
+      const userBalance = getUserBalance(user);
 
       res.status(200).json({ balance: userBalance });
     } catch (error) {
@@ -82,66 +181,9 @@ export const getBalance: RequestHandler = asyncHandler(
     }
   }
 );
-export const getAssets : RequestHandler = asyncHandler(
-  async (req: Request, res: Response) => {
-    
-  }
+export const getAssets: RequestHandler = asyncHandler(
+  async (req: Request, res: Response) => {}
 );
-export const calculatePnl = () : number => {
+export const calculatePnl = (): number => {
   return 1000;
-} 
-
-export const openOrder: RequestHandler = asyncHandler(
-  async (req: Request, res: Response) => {
-    const { symbol, orderType, quantity, price, leverage, margin } = req.body;
-    const userId = req.user.id;
-
-    const userBalance = getUserBalance(userId);
-
-    const {isOrderValid, orderValue} = checkValidOrder(
-      quantity,
-      price,
-      margin,
-      leverage,
-      orderType,
-      symbol, 
-      userBalance
-    );
-    if (!isOrderValid) {
-      throw new CustomError(400, "Insufficient balance or invalid order ");
-    }
-    if (orderType === "buy") {
-      if (!leverage) {
-
-        const newUserBalance = userBalance - orderValue; 
-
-        // create order in db with quantity price leverage margin , status as open , 
-        
-        // update user balance in db
-
-
-      } else {
-
-
-      }
-    } else if (orderType === "sell") {
-      if (!leverage) {
-
-        // 
-
-        const pnL = calculatePnl();
-        const newUserBalance = userBalance + pnL;
-
-        // update in order table db 
-
-      } else {
-      }
-    }
-  }
-);
-
-export const closeOrder: RequestHandler = asyncHandler(async (req, res) => {
-  // find order in db
-  // update order - close price
-  // update the status of the order
-});
+};

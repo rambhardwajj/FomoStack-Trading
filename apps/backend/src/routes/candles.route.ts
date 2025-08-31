@@ -5,6 +5,6 @@ import { isLoggedIn } from "../middleware/authMiddleware.js";
 
 const router : Router= Router();
 
-router.post("/get-candles",  getCandles)
+router.post("/get-candles/:asset/:interval/:limit",  getCandles)
 
 export default router;  

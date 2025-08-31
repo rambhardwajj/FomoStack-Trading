@@ -10,7 +10,7 @@ console.log(INTERVALS);
 connectDB();
 
 export const getCandles: RequestHandler = asyncHandler(async (req, res) => {
-  const { asset, interval, limit } = req.body;
+  const { asset, interval, limit } = req.params;
   console.log(asset, interval, limit)
 
   if (!asset || !interval || !limit) {

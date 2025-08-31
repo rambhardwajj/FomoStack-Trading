@@ -43,6 +43,7 @@ async function subscribeToThePubSub() {
     for (const asset of BINANCE_ASSETS) {
       await beSubscriber.subscribe(`binance:prices:${asset}`, (message) => {
         console.log(`Message from ${asset}: ${message}`);
+
       });
     }
   } catch (error) {
