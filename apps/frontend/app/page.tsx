@@ -9,6 +9,16 @@ export default function TradingPage() {
   const [selectedInterval, setSelectedInterval] = useState("1minute");
   const [selectedAsset, setSelectedAsset] = useState("BTCUSDT");
   const [selectedLimit, setSelectedLimit] = useState(100);
+
+  const [useLeverage, setUseLeverage] = useState(false);
+  const [leverage, setLeverage] = useState<number | null>(null);
+  const [margin, setMargin] = useState("");
+  const [quantity, setQuantity] = useState("");
+  const [stopLoss, setStopLoss] = useState("");
+  const [selected, setSelected] = useState<string | null>(null);
+
+  const leverageOptions = [1, 2, 4, 10];
+
   return (
     <div className="min-h-screen bg-black text-white flex flex-col">
       {/* Header  */}
@@ -88,37 +98,100 @@ export default function TradingPage() {
               interval={selectedInterval}
               limit={selectedLimit}
             />
-            <div className=" w-[20vw]  rounded">
-              <div className="flex space-x-4">
-                <div className="flex-1 border border-green-700 rounded h-15 justify-center items-center flex flex-col hover:bg-green-500 hover:text-black cursor-pointer font-bold">
-                  Buy
-                  <div>{}</div>
-                </div>
-                <div className="flex-1 border border-red-700 rounded h-15 justify-center items-center flex flex-col hover:bg-red-500 hover:text-black cursor-pointer font-bold ">
-                  Sell
-                </div>
-              </div>
+            <div className="w-[20vw] p-4 rounded-sm bg-neutral-900 border border-neutral-700 shadow-lg space-y-4 flex flex-col justify-between ">
+              {/* Buy & Sell Buttons */}
+              <div>
+                <div className="flex space-x-4">
+                  <div
+                    onClick={() => setSelected("buy")}
+                    className={`flex-1 border rounded-xl h-14 flex justify-center items-center flex-col font-bold cursor-pointer transition duration-300 
+          ${
+            selected === "buy"
+              ? "bg-green-500 text-black border-green-600"
+              : "text-green-400 border-green-600 hover:bg-green-500 hover:text-black"
+          }`}
+                  >
+                    Buy
+                  </div>
 
-              <div className="h-12 flex justify-start items-center rounded">
-                <input
-                  type="text"
-                  placeholder="Enter the Margin"
-                  className=" pl-5 p-2 border-1 border-neutral-500 w-[25vw] rounded"
-                />
+                  {/* Sell Button */}
+                  <div
+                    onClick={() => setSelected("sell")}
+                    className={`flex-1 border rounded-xl h-14 flex justify-center items-center flex-col font-bold cursor-pointer transition duration-300 
+          ${
+            selected === "sell"
+              ? "bg-red-500 text-black border-red-600"
+              : "text-red-400 border-red-600 hover:bg-red-500 hover:text-black"
+          }`}
+                  >
+                    Sell
+                  </div>
+                </div>
+                <div className="flex flex-col space-y-3 justify-between">
+                  <div className="flex flex-col space-y-3">
+                    <div className="space-y-3">
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          checked={useLeverage}
+                          onChange={() => setUseLeverage(!useLeverage)}
+                          className="w-4 h-4 accent-blue-500"
+                        />
+                        <label className="text-sm p-3">Use Leverage</label>
+                      </div>
+                    </div>
+
+                    {useLeverage && (
+                      <div className="flex space-x-2">
+                        {leverageOptions.map((option) => (
+                          <button
+                            key={option}
+                            onClick={() => setLeverage(option)}
+                            className={`px-3 py-1 rounded-lg border text-sm font-medium transition ${
+                              leverage === option
+                                ? "bg-blue-500 text-black border-blue-500"
+                                : "border-neutral-600 text-white hover:bg-neutral-800"
+                            }`}
+                          >
+                            {option}x
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
+                    {!useLeverage && (
+                      <input
+                        type="number"
+                        placeholder="Enter the Margin"
+                        value={margin}
+                        onChange={(e) => setMargin(e.target.value)}
+                        className="w-full px-4 py-2 border border-neutral-600 rounded-lg bg-neutral-800 text-white placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    )}
+
+                    <input
+                      type="number"
+                      placeholder="Enter the Quantity"
+                      value={quantity}
+                      onChange={(e) => setQuantity(e.target.value)}
+                      className="w-full px-4 py-2 border border-neutral-600 rounded-lg bg-neutral-800 text-white placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+
+                    {/* Stop Loss */}
+                    <input
+                      type="number"
+                      placeholder="Enter Stop Loss"
+                      value={stopLoss}
+                      onChange={(e) => setStopLoss(e.target.value)}
+                      className="w-full px-4 py-2 border border-neutral-600 rounded-lg bg-neutral-800 text-white placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                </div>
               </div>
-              <div className="h-12 flex justify-start items-center rounded">
-                <input
-                  type="text"
-                  placeholder="Enter the Quantity"
-                  className=" pl-5 p-2 w-[25vw] border-1 border-neutral-500 rounded"
-                />
-              </div>
-              <div className="h-12  flex justify-start items-center rounded">
-                <input
-                  type="text"
-                  placeholder="Enter the Levrage"
-                  className=" border-1 border-neutral-500 w-[25vw] rounded pl-5 p-2"
-                />
+              <div className="flex justify-center items-center">
+                <button className="px-10 py-3 bg-green-700 rounded-md ">
+                  Place Your Order
+                </button>
               </div>
             </div>
           </div>
