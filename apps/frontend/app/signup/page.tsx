@@ -1,13 +1,13 @@
 "use client"
 import axios from "axios";
-import { useRouter } from "next/router";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 export default function Signup() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [user, setUser] = useState(null)
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false)
   
   const router = useRouter();
 
@@ -91,7 +91,7 @@ export default function Signup() {
 
         <p className="mt-4 text-sm text-center text-gray-400">
           Already have an account?{" "}
-          <a href="/login" className="text-blue-400 hover:underline">
+          <a href="/signin" className="text-blue-400 hover:underline">
             Log in
           </a>
         </p>

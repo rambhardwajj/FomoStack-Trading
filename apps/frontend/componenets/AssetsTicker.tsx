@@ -33,7 +33,7 @@ export default function AssetsTicker() {
     };
 
     const interval = setInterval(() => {
-      setRender((prev) => prev + 1); // trigger re-render
+      setRender((prev) => prev + 1); 
     }, 300);
 
     socket.onerror = (error) => console.error("WebSocket Error:", error);
@@ -51,14 +51,14 @@ export default function AssetsTicker() {
         ([symbol, { buyPrice, sellPrice, lastBuyPrice, lastSellPrice }]) => (
           <div
             key={symbol}
-            className="flex items-center justify-between bg-neutral-900 border border-neutral-700 rounded-xl px-4 py-2 shadow-sm"
+            className="flex items-center justify-between max-w-[30vw] rounded-sm px-4 py-2 shadow-sm "
           >
             {/* Symbol */}
-            <span className="font-semibold text-white w-24">{symbol}</span>
+            <span className="font-semibold text-white text-sm">{symbol}</span>
 
             {/* Buy */}
             <div
-              className={`w-24 text-center font-medium ${
+              className={` text-center text-sm w-[30%] ${
                 lastBuyPrice < buyPrice ? "text-green-500" : "text-red-400"
               }`}
             >
@@ -67,7 +67,7 @@ export default function AssetsTicker() {
 
             {/* Sell */}
             <div
-              className={`w-24 text-center font-medium ${
+              className={`w-[30%] text-center  text-sm font-medium ${
                 lastSellPrice < sellPrice ? "text-green-500" : "text-red-400"
               }`}
             >

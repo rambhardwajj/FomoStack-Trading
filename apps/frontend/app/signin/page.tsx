@@ -3,23 +3,26 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import axios from "axios";
+import { useUser } from "@/context/UserContext";
 
 export default function Signin() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+    const { setUser } = useUser(); 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     try {
-      const res = await axios.post("http://localhost:4000/auth/signin", {
+      const res = await axios.post("http://localhost:4000/api/v1/auth/signin", {
         email,
         password,
-      });
+      },  { withCredentials: true });
 
       console.log("User signed in:", res.data);
+      setUser(res.data.user ||res.data.data);
       router.push("/"); // Redirect
     } catch (err) {
       console.error("Signin error:", err);

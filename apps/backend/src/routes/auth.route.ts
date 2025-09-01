@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { googleLogin, signin, signout, signup } from "../controllers/auth.controller.js";
+import { getUser, googleLogin, signin, signout, signup } from "../controllers/auth.controller.js";
 import { isLoggedIn } from "../middleware/authMiddleware.js";
 
 const router: Router = Router()
@@ -10,6 +10,8 @@ router.post("/signup", signup);
 
 router.post("/signin", signin);
 
-router.post('/logout', isLoggedIn,  signout)
+router.post('/signout', isLoggedIn,  signout)
+
+router.get('/getUser', isLoggedIn, getUser)
 
 export default router;

@@ -1,4 +1,4 @@
-import type { RequestHandler } from "express";
+import type { Request, RequestHandler } from "express";
 import asyncHandler from "../utils/asyncHandler.js";
 import { CustomError } from "../utils/CustomError.js";
 import { verifyGoogleToken } from "../utils/verifyGoogleToken.js";
@@ -69,7 +69,7 @@ export const signin: RequestHandler = asyncHandler(async (req, res) => {
   const expiresAt = new Date(
     Date.now() + ms(process.env.REFRESH_TOKEN_EXPIRY as StringValue)
   );
-  await prisma.user.update({
+  const updatedUser = await prisma.user.update({
     where: { email },
     data: { refreshToken: hashedRefreshToken, refreshTokenExpiry: expiresAt },
   });
@@ -77,7 +77,7 @@ export const signin: RequestHandler = asyncHandler(async (req, res) => {
     .status(200)
     .cookie("accessToken", accessToken, generateCookieOptions())
     .cookie("refreshToken", refreshToken, generateCookieOptions({ rememberMe }))
-    .json(new ApiResponse(200, "Login successful", null));
+    .json(new ApiResponse(200, "Login successful", updatedUser));
 });
 
 export const googleLogin: RequestHandler = asyncHandler(async (req, res) => {
@@ -141,6 +141,25 @@ export const signout: RequestHandler = asyncHandler(async(req, res)=>{
     }
   })
 
+  res.clearCookie("accessToken");
+  res.clearCookie("refreshToken");
   res.status(200).json(new ApiResponse(200, "Signout successful", null));
 
+})
+
+export const getUser: RequestHandler = asyncHandler(async (req:Request, res) =>{
+  const userId = req.user.id;
+  if(!userId) throw new CustomError(400, "user not found ")
+
+  try {
+    const user = await prisma.user.findFirst({
+      where: {id: req.user.id}
+    })
+
+    if(!user) throw new CustomError(404, "User not found");
+
+    res.status(200).json(new ApiResponse(200, "User fetched", user));
+  } catch (error) {
+    throw new CustomError(401, "User can be fetched");
+  }
 })

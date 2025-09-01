@@ -250,7 +250,6 @@ export const closeOrder: RequestHandler = asyncHandler(async (req, res) => {
     .status(200)
     .json(new ApiResponse(200, "Order closed successfully", closedOrder));
 });
-
 export const getOpenOrdersForUser: RequestHandler = asyncHandler(
   async (req: Request, res: Response) => {
     try {
@@ -310,8 +309,6 @@ export const getClosedOrders: RequestHandler = asyncHandler(
     }
   }
 );
-
-
 export const getBalance: RequestHandler = asyncHandler(
   async (req: Request, res: Response) => {
     try {
