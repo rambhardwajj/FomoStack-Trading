@@ -9,7 +9,10 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 const orders = new Map<string, Order>(); // orderId -> Order
 const userOrders = new Map<string, Set<string>>(); // userId -> Set of orderIds
 const activeOrders = new Set<string>(); // Set of active order IDs
+const closeOrders = new Set<string>(); // Set of close order IDs
 const ordersBySymbol = new Map<string, Set<string>>();
+const orderWithStopLossPrice = new Map<string, number>();
+
 
 const getUserData = async (userId: string) => {
   if (!userId) {
@@ -86,6 +89,10 @@ async function updateUserBalance(userId: string, updatedBalance: number) {
 
 async function startTransaction(orderData: Order) {}
 
+const calculatePnl = (order: Order, currentPrice: number): number => {
+  return 1000;
+};
+
 export const openOrder: RequestHandler = asyncHandler(
   async (req: Request, res: Response) => {
     let { symbol, orderType, leverage, margin, stopLoss } = req.body;
@@ -126,6 +133,10 @@ export const openOrder: RequestHandler = asyncHandler(
 
     const orderId = crypto.randomUUID();
 
+    if (!orderWithStopLossPrice.get(orderId)) {
+      orderWithStopLossPrice.set(orderId, liquidatePrice);
+    }
+
     const orderData = {
       id: orderId,
       userId: userId,
@@ -141,6 +152,7 @@ export const openOrder: RequestHandler = asyncHandler(
       closedAt: null,
       createdAt: new Date(),
       updatedAt: new Date(),
+      pnl: null,
       user: user,
     };
 
@@ -168,36 +180,99 @@ export const openOrder: RequestHandler = asyncHandler(
 
       res.status(200).json(new ApiResponse(200, "Order Opened", orderData));
     } catch (error) {
-      throw new CustomError(500, "Open Order failed ")
+      throw new CustomError(500, "Open Order failed ");
     }
   }
 );
 
 export const closeOrder: RequestHandler = asyncHandler(async (req, res) => {
-  // find order in db
-  // update order - close price
-  // update the status of the order
+  const { orderId } = req.params;
+  const userId = req.user.id;
+  if (!orderId) throw new CustomError(500, "Invalid order id ");
+
+  if (!orders.get(orderId))
+    throw new CustomError(400, "Order does not exists ");
+
+  const order = orders.get(orderId);
+  if (!order) throw new CustomError(500, "order not found");
+
+  const symbol = order.symbol;
+
+  if (!activeOrders.has(orderId))
+    throw new CustomError(500, "Not an open order");
+
+  const price = await beSubscriber.get(`binance:latest:${symbol}`);
+
+  if (!price)
+    throw new CustomError(400, "Unable to fetch current price for this asset");
+
+  const priceData = JSON.parse(price);
+
+  let currentPrice: number;
+  let closedOrder;
+  let pnl = 0;
+
+  if (priceData.buyPrice && priceData.sellPrice) {
+    // If you have bid/ask prices, use appropriate one based on order type
+    currentPrice =
+      order.orderType === "buy" ? priceData.sellPrice : priceData.buyPrice;
+    if (!currentPrice || isNaN(currentPrice)) {
+      throw new CustomError(400, "Invalid price data received");
+    }
+    pnl = calculatePnl(order, currentPrice);
+    closedOrder = {
+      ...order,
+      status: "CLOSED" as const,
+      closedAt: new Date(),
+      updatedAt: new Date(),
+      closingPrice: currentPrice,
+      pnl: pnl,
+    };
+    orders.set(orderId, closedOrder);
+    activeOrders.delete(orderId);
+  }
+
+  closeOrders.add(closedOrder!.id)
+
+  const symbolOrders = ordersBySymbol.get(symbol);
+  if (symbolOrders) {
+    symbolOrders.delete(orderId);
+  }
+
+  const user = await getUserData(userId);
+  const currentBalance = getUserBalance(user);
+
+  const newBalance = currentBalance + order.margin! + pnl;
+
+  await updateUserBalance(userId, newBalance);
+
+  res
+    .status(200)
+    .json(new ApiResponse(200, "Order closed successfully", closedOrder));
 });
 
-export const getOrders: RequestHandler = asyncHandler(
-  async (req: Request, res: Response) => {
-    try {
-      const userId = req.user.id;
-
-      res.status(200).json({});
-    } catch (error) {
-      res.status(500).json({ message: error });
-    }
-  }
-);
 export const getOpenOrdersForUser: RequestHandler = asyncHandler(
   async (req: Request, res: Response) => {
     try {
       const userId = req.user.id;
 
-      // find orders in db with userId = userId and Order.status = Open
+      const userAllOrders = userOrders.get(userId);
+      if (!userAllOrders)
+        throw new CustomError(400, "No  orders of this users exists");
 
-      res.status(200).json({});
+      const allOrdersIds = Array.from(userAllOrders!);
+
+      let result: any[] = [];
+      for (const orderId in allOrdersIds) {
+        if (activeOrders.has(orderId)) {
+          const order = orders.get(orderId);
+          result.push(order);
+        }
+      }
+
+      res
+        .status(200)
+        .json(new ApiResponse(200, "All open orders of user fetched", result));
     } catch (error) {
       res.status(500).json({ message: error });
     }
@@ -205,27 +280,38 @@ export const getOpenOrdersForUser: RequestHandler = asyncHandler(
 );
 export const getAllOpenOrders: RequestHandler = asyncHandler(
   async (req: Request, res: Response) => {
+    let result: any[] = [];
     try {
-      // find orders in db with Order.status = Open
-
-      res.status(200).json({});
+      const allOpenOrderIds = Array.from(activeOrders);
+      for (const orderId in allOpenOrderIds) {
+        if (activeOrders.has(orderId)) {
+          result.push(orders.get(orderId));
+        }
+      }
+      res.status(200).json(new ApiResponse(200, "Open orders fetched", result));
     } catch (error) {
       res.status(500).json({ message: error });
     }
   }
 );
-export const getClosedOrdersForUser: RequestHandler = asyncHandler(
+export const getClosedOrders: RequestHandler = asyncHandler(
   async (req: Request, res: Response) => {
+   let result: any[] = [];
     try {
-      const userId = req.user.id;
-      // find orders in db with userId = userId and Order.status = Closed
-
-      res.status(200).json({});
+      const allClosedOrder = Array.from(closeOrders);
+      for (const orderId in allClosedOrder) {
+        if (closeOrders.has(orderId)) {
+          result.push(orders.get(orderId));
+        }
+      }
+      res.status(200).json(new ApiResponse(200, "Closed orders fetched", result));
     } catch (error) {
       res.status(500).json({ message: error });
     }
   }
 );
+
+
 export const getBalance: RequestHandler = asyncHandler(
   async (req: Request, res: Response) => {
     try {
@@ -242,6 +328,3 @@ export const getBalance: RequestHandler = asyncHandler(
 export const getAssets: RequestHandler = asyncHandler(
   async (req: Request, res: Response) => {}
 );
-export const calculatePnl = (): number => {
-  return 1000;
-};

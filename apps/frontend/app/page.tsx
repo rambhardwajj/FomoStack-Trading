@@ -1,5 +1,6 @@
 "use client";
 import AssetsTicker from "@/componenets/AssetsTicker";
+import { LastTrades } from "@/componenets/lastTrades";
 import TradingView from "@/componenets/TradingViews";
 import Image from "next/image";
 import React, { useState } from "react";
@@ -20,7 +21,13 @@ export default function TradingPage() {
             <Image src="/btc.png" alt="" width={50} height={50} />
           </div>
           <div className="">
-            <Image className="rounded-[50%]" src="/et.png" alt="" width={30} height={30} />
+            <Image
+              className="rounded-[50%]"
+              src="/et.png"
+              alt=""
+              width={30}
+              height={30}
+            />
           </div>
           <div className="rounded">
             <Image src="/sol.png" alt="" width={35} height={35} />
@@ -28,7 +35,9 @@ export default function TradingPage() {
         </div>
 
         <div className="flex items-center space-x-4">
-          <div className="px-4 py-2 border border-neutral-700 rounded">5000 $</div>
+          <div className="px-4 py-2 border border-neutral-700 rounded">
+            5000 $
+          </div>
           <button className="px-4 py-2 border border-neutral-700 rounded">
             Deposit
           </button>
@@ -41,40 +50,8 @@ export default function TradingPage() {
         <div className="flex flex-col w-1/4 space-y-3">
           <div className="flex-1 rounded">
             <AssetsTicker />
+            <LastTrades />
           </div>
-
-          <div className="flex space-x-4">
-            <div className="flex-1 border border-green-700 rounded h-15 justify-center items-center flex flex-col hover:bg-green-500 hover:text-black cursor-pointer font-bold">
-              Buy
-              <div>{}</div>
-            </div>
-            <div className="flex-1 border border-red-700 rounded h-15 justify-center items-center flex flex-col hover:bg-red-500 hover:text-black cursor-pointer font-bold ">
-              Sell
-            </div>
-          </div>
-          
-          <div className="h-12 flex justify-start items-center rounded">
-            <input
-              type="text"
-              placeholder="Enter the Margin"
-              className=" pl-5 p-2 border-1 w-[25vw] rounded"
-            />
-          </div>
-          <div className="h-12 flex justify-start items-center rounded">
-            <input
-              type="text"
-              placeholder="Enter the Quantity"
-              className=" pl-5 p-2 w-[25vw] border-1 rounded"
-            />
-          </div>
-          <div className="h-12  flex justify-start items-center rounded">
-            <input
-              type="text"
-              placeholder="Enter the Levrage"
-              className=" border-1 w-[25vw] rounded pl-5 p-2"
-            />
-          </div>
-          
         </div>
 
         <div className="flex flex-col flex-1 space-y-4">
@@ -106,23 +83,57 @@ export default function TradingPage() {
             </select>
           </div>
           <div className="flex ml-4 p-2 rounded">
-            <TradingView asset={selectedAsset} interval={selectedInterval} limit={selectedLimit} />
-              <div className=" w-[20vw] border border-neutral-700 rounded">
-                
+            <TradingView
+              asset={selectedAsset}
+              interval={selectedInterval}
+              limit={selectedLimit}
+            />
+            <div className=" w-[20vw]  rounded">
+              <div className="flex space-x-4">
+                <div className="flex-1 border border-green-700 rounded h-15 justify-center items-center flex flex-col hover:bg-green-500 hover:text-black cursor-pointer font-bold">
+                  Buy
+                  <div>{}</div>
+                </div>
+                <div className="flex-1 border border-red-700 rounded h-15 justify-center items-center flex flex-col hover:bg-red-500 hover:text-black cursor-pointer font-bold ">
+                  Sell
+                </div>
               </div>
 
+              <div className="h-12 flex justify-start items-center rounded">
+                <input
+                  type="text"
+                  placeholder="Enter the Margin"
+                  className=" pl-5 p-2 border-1 border-neutral-500 w-[25vw] rounded"
+                />
+              </div>
+              <div className="h-12 flex justify-start items-center rounded">
+                <input
+                  type="text"
+                  placeholder="Enter the Quantity"
+                  className=" pl-5 p-2 w-[25vw] border-1 border-neutral-500 rounded"
+                />
+              </div>
+              <div className="h-12  flex justify-start items-center rounded">
+                <input
+                  type="text"
+                  placeholder="Enter the Levrage"
+                  className=" border-1 border-neutral-500 w-[25vw] rounded pl-5 p-2"
+                />
+              </div>
+            </div>
           </div>
 
           {/* RL  */}
           <div className="flex space-x-4">
-            <div className="flex flex-col space-y-2">
-            </div>
+            <div className="flex flex-col space-y-2"></div>
 
             <div className="flex-1 flex flex-col space-y-2">
-               <select
+              <select
                 className="bg-neutral-900 text-white cursor-pointer text-sm max-w-[10vw] border border-neutral-700 rounded px-2 py-1 focus:outline-none"
                 defaultValue={selectedLimit}
-                onChange={(e) => setSelectedLimit(Number(e.currentTarget.value))}
+                onChange={(e) =>
+                  setSelectedLimit(Number(e.currentTarget.value))
+                }
               >
                 <option value="Pending">Order History</option>
                 <option value="Open">Open</option>

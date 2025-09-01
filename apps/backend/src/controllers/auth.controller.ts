@@ -58,7 +58,7 @@ export const signin: RequestHandler = asyncHandler(async (req, res) => {
     throw new CustomError(400, "Invalid email or password");
   }
 
-  const isPasswordValid = await passwordMatch(password, user.passwordHash);
+  const isPasswordValid = await passwordMatch(password, user.passwordHash!);
   if (!isPasswordValid) {
     throw new CustomError(400, "Invalid email or password");
   }

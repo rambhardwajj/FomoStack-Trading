@@ -46,7 +46,7 @@ model Order {
   openingPrice Int?
   closingPrice Int?
   stopLoss  Int?
-
+ pnl      Int? 
   closedAt DateTime?
 
   createdAt DateTime? @default(now())
