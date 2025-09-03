@@ -19,6 +19,7 @@ async function init() {
     console.log("Topic created ", binAssets);
   }
   console.log(await admin.listTopics());
+  
 
   console.log("Disconecting admin");
   await admin.disconnect();

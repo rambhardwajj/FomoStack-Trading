@@ -5,14 +5,69 @@ import { prisma } from "../config/db.js";
 import { Order, User } from "@prisma/client";
 import { beSubscriber } from "../index.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
+import { BINANCE_ASSETS } from "@repo/assets";
+
+import {
+  MinPriorityQueue,
+  MaxPriorityQueue,
+} from "@datastructures-js/priority-queue";
 
 const orders = new Map<string, Order>(); // orderId -> Order
 const userOrders = new Map<string, Set<string>>(); // userId -> Set of orderIds
 const activeOrders = new Set<string>(); // Set of active order IDs
 const closeOrders = new Set<string>(); // Set of close order IDs
 const ordersBySymbol = new Map<string, Set<string>>();
-const orderWithStopLossPrice = new Map<string, number>();
 
+const orderWithLiquidationPrice = new Map<string, number>();
+
+type liqOrder = {
+  orderId: string;
+  liqPrice: number;
+  userId: string;
+  symbol: string;
+};
+// const longOrdersPq = new MinPriorityQueue<{
+//   orderId: string;
+//   liqPrice: number;
+//   userId: string;
+//   symbol: string;
+// }>((o) => o.liqPrice);
+
+// const shortOrdersPq = new MaxPriorityQueue<{
+//   orderId: string;
+//   liqPrice: number;
+//   userId: string;
+//   symbol: string;
+// }>((o) => o.liqPrice);
+
+const longOrdersHm = new Map<string, MinPriorityQueue<liqOrder>>();
+const shortOrderHm = new Map<string, MaxPriorityQueue<liqOrder>>();
+
+const addInHmPq = (
+  orderType: string,
+  userId: string,
+  orderId: string,
+  liqPrice: number,
+  symbol: string
+) => {
+  if (orderType === "buy") {
+    if (!longOrdersHm.has(symbol)) {
+      longOrdersHm.set(
+        symbol,
+        new MinPriorityQueue<liqOrder>((o) => o.liqPrice)
+      );
+    }
+    longOrdersHm.get(symbol)?.enqueue({ orderId, liqPrice, userId, symbol });
+  } else {
+    if (!shortOrderHm.has(symbol)) {
+      shortOrderHm.set(
+        symbol,
+        new MaxPriorityQueue<liqOrder>((o) => o.liqPrice)
+      );
+    }
+    shortOrderHm.get(symbol)?.enqueue({ orderId, liqPrice, userId, symbol });
+  }
+};
 
 const getUserData = async (userId: string) => {
   if (!userId) {
@@ -40,29 +95,24 @@ const getUserBalance = (user: User) => {
   const userBalance = user.balance;
   return userBalance;
 };
-function checkValidOrder(exposedTradeValue: number, userBalance: number) {
-  if (exposedTradeValue < userBalance)
+function checkValidOrder(requiredMargin: number, userBalance: number) {
+  if (requiredMargin > userBalance) {
     throw new CustomError(
       403,
-      `Cannot apply ${exposedTradeValue} margin as User Balance is not sufficient `
+      `Cannot apply margin of ${requiredMargin}, user balance is only ${userBalance}`
     );
-  // if not then user can place the order in case of buy ̰
+  }
   return true;
 }
 function calculateLiqAmt(
-  userBalance: number,
-  orderValue: number,
   leverage: number,
   orderType: string,
-  stopLoss: number,
   currStockPrice: number
-) {
+): number {
   if (orderType === "buy") {
-    let liqAmt = currStockPrice - currStockPrice / leverage;
-    return liqAmt - stopLoss;
+    return currStockPrice * (1 - 1 / leverage);
   } else {
-    let liqAmt = currStockPrice + currStockPrice / leverage;
-    return liqAmt + stopLoss;
+    return currStockPrice * (1 + 1 / leverage);
   }
 }
 async function updateUserBalance(userId: string, updatedBalance: number) {
@@ -86,55 +136,46 @@ async function updateUserBalance(userId: string, updatedBalance: number) {
     throw new CustomError(500, "user balance not debited");
   }
 }
-
+async function getLatestAssetPrice(symbol: string) {
+  const assetCurrPrice = await beSubscriber.get(`binance:latest:${symbol}`);
+  return Number(assetCurrPrice);
+}
 async function startTransaction(orderData: Order) {}
 
-const calculatePnl = (order: Order, currentPrice: number): number => {
-  return 1000;
-};
+//----------------------
 
 export const openOrder: RequestHandler = asyncHandler(
   async (req: Request, res: Response) => {
-    let { symbol, orderType, leverage, margin, stopLoss } = req.body;
+    let { symbol, orderType, leverage, quantity, stopLoss } = req.body;
     const userId = req.user.id;
 
-    if (!symbol || !orderType || !leverage || !margin) {
+    if (!symbol || !orderType || !leverage) {
       throw new CustomError(400, "Invalid Inputs");
-    }
-    if (!stopLoss) {
-      stopLoss = margin;
     }
 
     const user = await getUserData(userId);
     const userBalance = getUserBalance(user);
-    const assetPrice = await beSubscriber.get(`binance:latest:${symbol}`);
+    const assetPrice = await getLatestAssetPrice(symbol);
     const currStockPrice = Number(assetPrice);
 
     if (!userBalance)
       throw new CustomError(500, "User Balance cannot be retrieved");
 
-    const orderValue = margin;
+    const positionValue = currStockPrice * quantity;
+    const margin = positionValue / leverage;
 
-    const isOrderValid = checkValidOrder(orderValue, userBalance);
+    checkValidOrder(margin, userBalance);
 
-    if (!isOrderValid) {
-      throw new CustomError(400, "Insufficient balance or invalid order ");
-    }
-
-    let liquidatePrice: number;
-    liquidatePrice = calculateLiqAmt(
-      userBalance,
-      orderValue,
+    const liquidationPrice = calculateLiqAmt(
       leverage,
       orderType,
-      stopLoss,
       currStockPrice
     );
 
     const orderId = crypto.randomUUID();
 
-    if (!orderWithStopLossPrice.get(orderId)) {
-      orderWithStopLossPrice.set(orderId, liquidatePrice);
+    if (!orderWithLiquidationPrice.get(orderId)) {
+      orderWithLiquidationPrice.set(orderId, liquidationPrice);
     }
 
     const orderData = {
@@ -150,6 +191,7 @@ export const openOrder: RequestHandler = asyncHandler(
       stopLoss: Math.round(stopLoss),
       closingPrice: null,
       closedAt: null,
+      quantity: quantity,
       createdAt: new Date(),
       updatedAt: new Date(),
       pnl: null,
@@ -157,24 +199,25 @@ export const openOrder: RequestHandler = asyncHandler(
     };
 
     const position = await startTransaction(orderData);
+    try {
+      addInHmPq(orderType, userId, orderId, liquidationPrice, symbol);
+    } catch (error) {
+      throw new CustomError(500, "cannot add in liquidation queue ");
+    }
 
     try {
-      // all orders ka map
       orders.set(orderId, orderData);
 
-      // all user orders ka map with orders set mai
       if (!userOrders.has(userId)) {
         userOrders.set(userId, new Set());
       }
       userOrders.get(userId)?.add(orderId);
 
-      //assets ka map
       if (!ordersBySymbol.has(symbol.toUpperCase())) {
         ordersBySymbol.set(symbol.toUpperCase(), new Set());
       }
       ordersBySymbol.get(symbol.toUpperCase())!.add(orderId);
 
-      // active orders
       if (!activeOrders.has(orderId)) activeOrders.add(orderId);
       await updateUserBalance(userId, userBalance - margin);
 
@@ -184,6 +227,100 @@ export const openOrder: RequestHandler = asyncHandler(
     }
   }
 );
+
+//-------------------------------------------------
+
+const calculatePnl = async (
+  orderId: string,
+  currPrice: number,
+  orderType: string
+): Promise<number> => {
+  if (!orderId) throw new CustomError(400, "Invalid Order Id");
+
+  const order = orders.get(orderId);
+  if (!order) throw new CustomError(400, "Order not found ");
+
+  const openingPrice = order.openingPrice!;
+  const leverage = order.leverage;
+  let pnl: number;
+
+  if (orderType === "buy") {
+    pnl = (currPrice - openingPrice) * order.quantity!;
+  } else {
+    pnl = (openingPrice - currPrice) * order.quantity!;
+  }
+
+  if (leverage) {
+    pnl = pnl * leverage;
+  }
+
+  return pnl;
+};
+const liquidateOrder = async (orderId: string, userId: string) => {
+  const order = orders.get(orderId);
+  if (!order) throw new CustomError(400, "Order not found");
+
+  const price = await getLatestAssetPrice(order.symbol);
+  const pnl = await calculatePnl(orderId, price, order.orderType);
+
+  const closedOrder = {
+    ...order,
+    status: "CLOSED" as const,
+    closedAt: new Date(),
+    updatedAt: new Date(),
+    closingPrice: price,
+    pnl: pnl,
+  };
+
+  orders.set(orderId, closedOrder);
+  activeOrders.delete(orderId);
+  closeOrders.add(orderId);
+
+  const user = await getUserData(userId);
+  const newBalance = Math.max(0, getUserBalance(user) + pnl); // wipe margin
+  await updateUserBalance(userId, newBalance);
+};
+
+export const getLiquidatingOrders: RequestHandler = asyncHandler(
+  async (req, res) => {
+    const liquidated: string[] = [];
+    const processQueue = async (
+      pq: MinPriorityQueue<liqOrder> | MaxPriorityQueue<liqOrder>,
+      isLongOrder: boolean
+    ) => {
+      while (!pq.isEmpty()) {
+        const peek = pq.front();
+        if (!peek) break;
+
+        const { orderId, userId, symbol, liqPrice } = peek;
+        const currPrice = await getLatestAssetPrice(symbol);
+
+        if (!currPrice) break;
+        let percentDiff: number;
+        if (isLongOrder)
+          percentDiff = ((currPrice - liqPrice) / currPrice) * 100;
+        else percentDiff = ((liqPrice - currPrice) / liqPrice) * 100;
+        if (percentDiff < 10) {
+          await liquidateOrder(orderId, userId);
+          liquidated.push(orderId);
+          pq.dequeue();
+        } else {
+          break;
+        }
+      }
+    };
+
+    for (const [symbol, pq] of longOrdersHm.entries()) {
+      await processQueue(pq, true);
+    }
+    for (const [symbol, pq] of shortOrderHm.entries()) {
+      await processQueue(pq, false);
+    }
+    return liquidated;
+  }
+);
+
+//-------------------------
 
 export const closeOrder: RequestHandler = asyncHandler(async (req, res) => {
   const { orderId } = req.params;
@@ -213,13 +350,12 @@ export const closeOrder: RequestHandler = asyncHandler(async (req, res) => {
   let pnl = 0;
 
   if (priceData.buyPrice && priceData.sellPrice) {
-    // If you have bid/ask prices, use appropriate one based on order type
     currentPrice =
       order.orderType === "buy" ? priceData.sellPrice : priceData.buyPrice;
     if (!currentPrice || isNaN(currentPrice)) {
       throw new CustomError(400, "Invalid price data received");
     }
-    pnl = calculatePnl(order, currentPrice);
+    pnl = await calculatePnl(orderId, currentPrice, order.orderType);
     closedOrder = {
       ...order,
       status: "CLOSED" as const,
@@ -232,7 +368,7 @@ export const closeOrder: RequestHandler = asyncHandler(async (req, res) => {
     activeOrders.delete(orderId);
   }
 
-  closeOrders.add(closedOrder!.id)
+  closeOrders.add(closedOrder!.id);
 
   const symbolOrders = ordersBySymbol.get(symbol);
   if (symbolOrders) {
@@ -242,7 +378,7 @@ export const closeOrder: RequestHandler = asyncHandler(async (req, res) => {
   const user = await getUserData(userId);
   const currentBalance = getUserBalance(user);
 
-  const newBalance = currentBalance + order.margin! + pnl;
+  const newBalance = Math.max(currentBalance + order.margin! + pnl, 0);
 
   await updateUserBalance(userId, newBalance);
 
@@ -250,6 +386,10 @@ export const closeOrder: RequestHandler = asyncHandler(async (req, res) => {
     .status(200)
     .json(new ApiResponse(200, "Order closed successfully", closedOrder));
 });
+
+//------------------------
+
+//-----------------------
 export const getOpenOrdersForUser: RequestHandler = asyncHandler(
   async (req: Request, res: Response) => {
     try {
@@ -262,7 +402,7 @@ export const getOpenOrdersForUser: RequestHandler = asyncHandler(
       const allOrdersIds = Array.from(userAllOrders!);
 
       let result: any[] = [];
-      for (const orderId in allOrdersIds) {
+      for (const orderId of allOrdersIds) {
         if (activeOrders.has(orderId)) {
           const order = orders.get(orderId);
           result.push(order);
@@ -282,7 +422,7 @@ export const getAllOpenOrders: RequestHandler = asyncHandler(
     let result: any[] = [];
     try {
       const allOpenOrderIds = Array.from(activeOrders);
-      for (const orderId in allOpenOrderIds) {
+      for (const orderId of allOpenOrderIds) {
         if (activeOrders.has(orderId)) {
           result.push(orders.get(orderId));
         }
@@ -295,15 +435,17 @@ export const getAllOpenOrders: RequestHandler = asyncHandler(
 );
 export const getClosedOrders: RequestHandler = asyncHandler(
   async (req: Request, res: Response) => {
-   let result: any[] = [];
+    let result: any[] = [];
     try {
       const allClosedOrder = Array.from(closeOrders);
-      for (const orderId in allClosedOrder) {
+      for (const orderId of allClosedOrder) {
         if (closeOrders.has(orderId)) {
           result.push(orders.get(orderId));
         }
       }
-      res.status(200).json(new ApiResponse(200, "Closed orders fetched", result));
+      res
+        .status(200)
+        .json(new ApiResponse(200, "Closed orders fetched", result));
     } catch (error) {
       res.status(500).json({ message: error });
     }

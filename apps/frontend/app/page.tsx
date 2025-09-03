@@ -28,6 +28,15 @@ export default function TradingPage() {
   const { user, logout } = useUser();
   console.log(user)
 
+  function handlePlaceOrder() {
+    console.log("OrderType- ", selected)
+    console.log("isLeverage- ", useLeverage)
+    console.log("margin- ", margin )
+    console.log('quantity- ', quantity)
+    console.log("stopLoss- ", stopLoss)
+
+  }
+
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white w-[100vw]">
       <header className="h-16 bg-[#111111] border-b border-[#1a1a1a] px-6 flex items-center justify-between">
@@ -66,21 +75,23 @@ export default function TradingPage() {
             <span className="text-sm text-gray-400 mr-2">Balance:</span>
             <span className="text-green-400 font-semibold">$5,000.00</span>
           </div>
-          <button className="px-4 py-2 bg-black hover:bg-neutral-700 border border-black-500 rounded-lg font-medium transition-colors">
+          <button className="px-4 py-2 bg-black hover:bg-neutral-700 border border-neutral-500 mx-5 rounded-lg font-medium transition-colors">
             Deposit
           </button>
-          <div className="w-8 h-8  rounded-full flex items-center justify-center">
+          <div className="w-8 h-8 mx-4  rounded-lg flex items-center justify-center">
             <div className="rounded-full">
 
               {
                 user && (
                   <button
+                  className="border-neutral-700 border rounded-md py-2 px-6"
                   onClick={logout}
                    >Logout</button>
                 )
               }
               {!user && (
-                <button onClick={() => router.push('/signin')} >
+                <button
+                className="border-neutral-700 border rounded-md py-2 px-6" onClick={() => router.push('/signin')} >
                   SignIn
                 </button>
               )}
@@ -183,7 +194,7 @@ export default function TradingPage() {
                       <input
                         type="checkbox"
                         checked={useLeverage}
-                        onChange={() => setUseLeverage(!useLeverage)}
+                        onChange={() =>  setUseLeverage(!useLeverage)}
                         className="sr-only peer"
                       />
                       <div className="w-11 h-6 bg-[#2a2a2a] peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
@@ -213,31 +224,21 @@ export default function TradingPage() {
                     </div>
                   )}
 
-                  {!useLeverage && (
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-gray-300">
-                        Margin
-                      </label>
-                      <input
-                        type="number"
-                        placeholder="Enter margin amount"
-                        value={margin}
-                        onChange={(e) => setMargin(e.target.value)}
-                        className="w-full px-4 py-3 border border-[#2a2a2a] rounded-lg bg-[#0a0a0a] text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 transition-colors"
-                      />
-                    </div>
-                  )}
+                  
 
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-300">
+                  <div className={` space-y-2
+                    ${margin ===""? "" : useLeverage === true? "":  "hidden"}
+                    `}>
+                    <label className={`text-sm font-medium text-gray-300 `}>
                       Quantity
                     </label>
                     <input
                       type="number"
                       placeholder="Enter quantity"
                       value={quantity}
+                      disabled={margin===""? false : useLeverage===true? false:  true }
                       onChange={(e) => setQuantity(e.target.value)}
-                      className="w-full px-4 py-3 border border-[#2a2a2a] rounded-lg bg-[#0a0a0a] text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 transition-colors"
+                      className={`w-full px-4 py-3 border border-[#2a2a2a] rounded-lg bg-[#0a0a0a] text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 transition-colors`}
                     />
                   </div>
 
@@ -263,6 +264,8 @@ export default function TradingPage() {
                           : "bg-[#2a2a2a] text-gray-400 cursor-not-allowed"
                     }`}
                     disabled={!selected}
+
+                    onClick={handlePlaceOrder}
                   >
                     {selected
                       ? `Place ${selected.charAt(0).toUpperCase() + selected.slice(1)} Order`

@@ -34,13 +34,11 @@ wss.on("connection", (ws) => {
 
 async function subscribeToThePubSub() {
   try {
-    console.log('in suvtothepubsub ')
-
     for( const asset of BINANCE_ASSETS){
-      console.log(asset)
+      // console.log(asset)
       await subscriberClient.subscribe(`binance:prices:${asset}`, (message) => {
-        console.log("subscribed to - ", asset)
-        console.log("subscribed message - ", message);
+        // console.log("subscribed to - ", asset)
+        // console.log("subscribed message - ", message);
         users.forEach((user) => {
           user.ws.send(message);
         });

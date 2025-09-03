@@ -12,6 +12,7 @@
     "@repo/typescript-config": "workspace:*"
   },
   "dependencies": {
+    "@datastructures-js/priority-queue": "^6.3.4",
     "@prisma/client": "^6.15.0",
     "@repo/assets": "workspace:*",
     "@repo/db": "workspace:*",

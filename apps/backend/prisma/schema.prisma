@@ -40,6 +40,7 @@ model Order {
   price     Int?
   leverage  Int?
   margin    Int?
+  quantity  Int?
 
   status String // OPEN, FILLED, PARTIALLY_FILLED, CANCELLED, CLOSED
 

@@ -100,9 +100,11 @@ subscribeToPubSub();
 
 import authRoute from "./routes/auth.route.js";
 import candlesRoute from "./routes/candles.route.js";
+import orderRouter from "./routes/order.route.js"
 
 app.use("/api/v1/auth", authRoute);
 app.use("/api/v1/candles", candlesRoute);
+app.use("/api/v1/orders", orderRouter )
 
 app.use(errorHandler);
 app.listen(PORT, () => {

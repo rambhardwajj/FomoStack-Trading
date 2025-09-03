@@ -50,17 +50,17 @@ export const LastTrades = () => {
         {Object.entries(tradeRefs.current).map(([symbol, trades = []]) => (
           <div
             key={symbol}
-            className="bg-neutral-900 border border-neutral-700 rounded-md shadow-lg overflow-hidden"
+            className="bg-neutral-950 border border-neutral-700 rounded-md shadow-lg overflow-hidden"
           >
             {/* Symbol Header */}
-            <div className="p-3 border-b border-neutral-700 text-white font-semibold text-lg tracking-wide">
+            <div className="p-3 border-b border-neutral-700 text-white font-semibold text-md tracking-wide">
               {symbol} - Last 2 Trades
             </div>
 
             {/* Table */}
             <div className="overflow-x-auto">
               <table className="w-full text-sm text-white">
-                <thead className="bg-neutral-800 text-xs uppercase tracking-wider text-gray-300">
+                <thead className="bg-neutral-900 text-xs uppercase tracking-wider text-gray-300">
                   <tr>
                     <th className="p-3 text-right">Buy</th>
                     <th className="p-3 text-right">Sell</th>

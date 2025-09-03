@@ -1,7 +1,15 @@
-// import { Router } from "express";
+import { Router } from "express";
+import { closeOrder, getLiquidatingOrders, openOrder } from "../controllers/order.controller.js";
+import { isLoggedIn } from "../middleware/authMiddleware.js";
 
-// const router: Router = Router();
+const router: Router = Router();
 
-// router.post('/create', openOrder);
+router.post('/create', isLoggedIn, openOrder );
 
-// export default router; 
+router.post('/liquidate', getLiquidatingOrders )
+
+router.post('/close-order', closeOrder )
+
+
+
+export default router; 
